@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Japan Trip 2026 — 17 Days Interactive Map</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f3ee; color: #2d2d2d; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+
+  header {
+    background: linear-gradient(135deg, #c0392b 0%, #8e1a0e 100%);
+    color: white; padding: 18px 28px;
+    padding-left: max(28px, env(safe-area-inset-left));
+    padding-right: max(28px, env(safe-area-inset-right));
+    padding-top: max(18px, env(safe-area-inset-top));
+    display: flex; align-items: center; gap: 14px; flex-shrink: 0;
+  }
+
+  .drawer-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.2);
+    color: inherit;
+    cursor: pointer;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .drawer-toggle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .drawer-toggle-bar {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: #fff;
+    border-radius: 1px;
+    transition: transform 0.2s, opacity 0.2s;
+  }
+  body.drawer-open .drawer-toggle .drawer-toggle-bar:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+  body.drawer-open .drawer-toggle .drawer-toggle-bar:nth-child(2) { opacity: 0; }
+  body.drawer-open .drawer-toggle .drawer-toggle-bar:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+  }
+
+  .drawer-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 299;
+    background: rgba(0,0,0,0.45);
+    -webkit-tap-highlight-color: transparent;
+  }
+  body.drawer-open .drawer-backdrop { display: block; }
+
+  .sidebar-mobile-header {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0dbd3;
+    background: #fff;
+    flex-shrink: 0;
+  }
+  .sidebar-mobile-header span {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+  .drawer-close {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 10px;
+    background: #f0ebe4;
+    color: #333;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .drawer-close:focus-visible { outline: 2px solid #c0392b; outline-offset: 2px; }
+  .day-badge {
+    background: rgba(255,255,255,0.22); border-radius: 50%;
+    width: 50px; height: 50px; display: flex; align-items: center;
+    justify-content: center; font-size: 20px; font-weight: 800; flex-shrink: 0;
+  }
+  header h1 { font-size: 20px; font-weight: 700; }
+  header p  { font-size: 13px; opacity: 0.82; margin-top: 2px; }
+
+  .day-nav {
+    background: #fff; border-bottom: 1px solid #e0dbd3;
+    padding: 0; display: flex; overflow-x: auto; flex-shrink: 0;
+    gap: 2px;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-inline: env(safe-area-inset-left);
+    padding-inline: max(0px, env(safe-area-inset-left)) max(0px, env(safe-area-inset-right));
+  }
+  .day-tab {
+    padding: 12px 14px; font-size: 12px; font-weight: 600;
+    background: transparent; border: none; cursor: pointer;
+    color: #777; white-space: nowrap; transition: all 0.2s;
+    border-bottom: 3px solid transparent;
+    min-height: 44px; flex-shrink: 0;
+  }
+  .day-tab:hover { color: #1a1a1a; }
+  .day-tab.active {
+    color: #c0392b; border-bottom-color: #c0392b;
+  }
+  .day-tab-badge {
+    display: block; font-size: 10px; color: #999;
+  }
+
+  .layout { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+  /* Desktop: only the sidebar scrolls; map + header stay viewport-fixed */
+  @media (min-width: 901px) {
+    html {
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+  }
+  .sidebar { width: 330px; background: #fff; overflow-y: auto; border-right: 1px solid #e0dbd3; flex-shrink: 0; -webkit-overflow-scrolling: touch; }
+  .sidebar-inner { padding: 16px 16px 28px; padding-bottom: max(28px, env(safe-area-inset-bottom)); }
+
+  .section-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.1px;
+    text-transform: uppercase; color: #aaa; margin: 18px 0 8px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  .travel-block {
+    background: #f0f4ff; border-radius: 10px; padding: 10px 12px;
+    margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px;
+  }
+  .travel-icon { font-size: 20px; padding-top: 2px; }
+  .travel-info { font-size: 12px; color: #555; line-height: 1.5; }
+  .travel-info strong { display: block; font-size: 13px; color: #1a1a1a; margin-bottom: 2px; }
+
+  .stop {
+    display: flex; gap: 10px; padding: 12px 10px;
+    border-radius: 10px; cursor: pointer; transition: background 0.15s;
+    border: 2px solid transparent; margin-bottom: 2px;
+    min-height: 48px;
+  }
+  .stop:hover { background: #fdf8f5; }
+  .stop.active { background: #fff4f0; border-color: #c0392b; }
+  .stop-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    color: white; font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
+  }
+  .stop-content { flex: 1; }
+  .stop-time  { font-size: 11px; color: #999; font-weight: 600; }
+  .stop-name  { font-size: 13px; font-weight: 700; color: #1a1a1a; margin: 1px 0 3px; }
+  .stop-desc  { font-size: 11.5px; color: #666; line-height: 1.45; }
+  .tag {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    padding: 2px 6px; border-radius: 20px; margin-top: 4px; margin-right: 3px;
+  }
+  .t-transport { background: #e8f0fe; color: #1a73e8; }
+  .t-food      { background: #fce8e6; color: #c0392b; }
+  .t-activity  { background: #e6f4ea; color: #137333; }
+  .t-hotel     { background: #fff3e0; color: #e65c00; }
+  .t-warn      { background: #fce8e6; color: #c0392b; border: 1px solid #f5a9a9; }
+  .connector { width: 2px; height: 10px; background: #e8e3db; margin: 0 0 2px 22px; }
+
+  .map-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  #map { flex: 1; touch-action: pan-x pan-y pinch-zoom; }
+  .notes-bar {
+    background: #fffbe6; border-top: 1px solid #f0e68c;
+    padding: 8px 16px; font-size: 11.5px; color: #6b5900;
+    display: flex; gap: 18px; flex-wrap: wrap; flex-shrink: 0;
+  }
+  .notes-bar span::before { content: "ⓘ "; }
+
+  .map-pin {
+    width: 32px; height: 32px; border-radius: 50%;
+    color: white; font-size: 14px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    border: 2.5px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .map-pin:hover { transform: scale(1.15); }
+
+  .gm-style .gm-style-iw-c { padding: 0 !important; overflow: visible !important; border-radius: 12px !important; box-shadow: 0 6px 24px rgba(0,0,0,0.22) !important; max-height: 70vh !important; max-width: none !important; }
+  .gm-style .gm-style-iw-ch { padding: 0 !important; margin: 0 !important; height: auto !important; }
+  .gm-style .gm-style-iw-d { overflow-x: hidden !important; overflow-y: auto !important; padding: 0 !important; max-height: 65vh !important; max-width: none !important; }
+  .gm-style .gm-style-iw-t::after { display: none !important; }
+  /* Hide Maps’ default close button */
+  .gm-style .gm-style-iw-c > button,
+  .gm-style .gm-style-iw-ch > button,
+  .gm-style .gm-style-iw-ch button,
+  .gm-style .gm-style-iw-c > button.gm-ui-hover-effect,
+  .gm-style .gm-style-iw-c button[aria-label="Close"],
+  .gm-style .gm-style-iw + button {
+    display: none !important;
+  }
+
+  .iw { font-family: 'Segoe UI', Arial, sans-serif; width: 360px; }
+
+  .iw-carousel-wrap { position: relative; width: 360px; }
+
+  .iw-carousel { position: relative; width: 360px; height: 200px; background: #1a1a1a; overflow: hidden; }
+  .iw-carousel-track { display: flex; height: 100%; transition: transform 0.35s cubic-bezier(.4,0,.2,1); will-change: transform; }
+  .iw-carousel-track img { min-width: 360px; width: 360px; height: 200px; object-fit: cover; flex-shrink: 0; display: block; }
+  .iw-placeholder {
+    min-width: 360px; width: 360px; height: 200px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 52px; background: linear-gradient(135deg,#f5f5f5,#e0e0e0);
+  }
+  .iw-loading {
+    min-width: 360px; width: 360px; height: 200px; flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    background: linear-gradient(135deg,#f5f5f5,#e8e8e8);
+    font-size: 12px; color: #999;
+  }
+  .spinner {
+    width: 28px; height: 28px; border: 3px solid #ddd;
+    border-top-color: #c0392b; border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .iw-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(0,0,0,0.5); color: white; border: none; cursor: pointer;
+    font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s; z-index: 5;
+  }
+  .iw-arrow:hover { background: rgba(0,0,0,0.8); }
+  .iw-arrow-left  { left: 8px; }
+  .iw-arrow-right { right: 8px; }
+  .iw-arrow.hidden { display: none; }
+  .iw-counter {
+    position: absolute; bottom: 8px; right: 10px;
+    background: rgba(0,0,0,0.55); color: white;
+    font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+  }
+  .iw-dots { position: absolute; bottom: 9px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
+  .iw-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.45); transition: background 0.2s; cursor: pointer; }
+  .iw-dot.active { background: white; }
+
+  .iw-body { padding: 11px 13px 4px; }
+  .iw-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 3px; }
+  .iw-num { width: 22px; height: 22px; border-radius: 50%; color: white; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .iw-name { font-size: 15px; font-weight: 700; color: #1a1a1a; line-height: 1.2; flex: 1; }
+  .iw-meta { padding-left: 30px; margin-bottom: 6px; }
+  .iw-time { font-size: 11px; color: #999; font-weight: 600; margin-bottom: 3px; }
+  .iw-desc { font-size: 12px; color: #444; line-height: 1.5; border-top: 1px solid #f0f0f0; padding-top: 8px; margin-top: 2px; }
+  .iw-tags { margin-top: 7px; margin-bottom: 4px; }
+  .iw-tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; margin-right: 3px; margin-top: 3px; }
+  .iw-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding: 6px 10px;
+  }
+  .iw-topbar-side {
+    width: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  }
+  .iw-topbar-spacer { width: 32px; height: 32px; flex-shrink: 0; }
+  .iw-topbar-center {
+    flex: 1; min-width: 0; display: flex; justify-content: center; align-items: center;
+  }
+  .iw-stop-nav {
+    width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer;
+    background: #f1f3f4; color: #444; font-size: 18px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .iw-stop-nav:hover { background: #e8eaed; }
+  .iw-gmaps-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #1a73e8; color: white; text-decoration: none;
+    font-size: 12px; font-weight: 600; padding: 6px 14px;
+    border-radius: 20px; transition: background 0.2s;
+  }
+  .iw-gmaps-btn:hover { background: #1558b0; }
+  .iw-gmaps-btn svg { width: 12px; height: 12px; fill: white; flex-shrink: 0; }
+
+  @media (max-width: 900px) {
+    html { overflow-x: hidden; }
+    .drawer-toggle { display: flex; }
+    .layout {
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: min(90vw, 420px);
+      max-height: none;
+      border-right: 1px solid #e0dbd3;
+      border-top: none;
+      z-index: 300;
+      transform: translateX(-100%);
+      transition: transform 0.28s ease;
+      box-shadow: 8px 0 32px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      pointer-events: none;
+    }
+    body.drawer-open .sidebar {
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+    body.drawer-open { overflow: hidden; }
+    .sidebar-mobile-header { display: flex; }
+    .sidebar-inner {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+      -webkit-overflow-scrolling: touch;
+    }
+    .map-wrap {
+      min-height: min(52vh, 480px);
+      flex: 1 1 auto;
+    }
+    #map { min-height: min(52vh, 480px); }
+    header { padding: 14px 18px; gap: 10px; }
+    header h1 { font-size: clamp(15px, 4vw, 20px); line-height: 1.25; }
+    header p { font-size: 12px; }
+    .day-badge { width: 44px; height: 44px; font-size: 18px; }
+    .day-tab { padding: 14px 16px; font-size: 13px; }
+    .stop-name { font-size: 14px; }
+    .stop-desc { font-size: 12px; }
+  }
+
+  @media (max-width: 480px) {
+    .iw { width: min(calc(100vw - 24px), 360px) !important; max-width: 100%; }
+    .iw-carousel-wrap { width: 100%; max-width: min(calc(100vw - 24px), 360px); }
+    .iw-carousel { width: 100%; }
+    .iw-carousel-track img,
+    .iw-placeholder,
+    .iw-loading {
+      min-width: unset !important;
+      width: 100% !important;
+      max-width: min(calc(100vw - 24px), 360px);
+    }
+    .iw-stop-nav { width: 40px; height: 40px; font-size: 20px; }
+    .iw-gmaps-btn { padding: 10px 16px; font-size: 13px; min-height: 44px; }
+    .iw-arrow { width: 40px; height: 40px; font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="drawer-backdrop" id="drawerBackdrop" aria-hidden="true"></div>
+
+<header>
+  <button type="button" class="drawer-toggle" id="drawerToggle" aria-label="Open itinerary" aria-expanded="false" aria-controls="sidebar">
+    <span class="drawer-toggle-bar" aria-hidden="true"></span>
+    <span class="drawer-toggle-bar" aria-hidden="true"></span>
+    <span class="drawer-toggle-bar" aria-hidden="true"></span>
+  </button>
+  <div class="day-badge" id="headerBadge">1</div>
+  <div>
+    <h1 id="headerTitle">Day 1 · Travel (ATL → ORD) · May 24</h1>
+    <p id="headerSubtitle">Travel Day - Depart at 3:30pm</p>
+  </div>
+</header>
+
+<div class="day-nav" id="dayNav"></div>
+
+<div class="layout">
+  <div class="sidebar" id="sidebar" role="navigation" aria-label="Day itinerary">
+    <div class="sidebar-mobile-header">
+      <span>Itinerary</span>
+      <button type="button" class="drawer-close" id="drawerClose" aria-label="Close itinerary">×</button>
+    </div>
+    <div class="sidebar-inner" id="sidebarContent"></div>
+  </div>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="notes-bar" id="notesBar" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+const DAYS = [
+  {dayNum:1,date:"May 24 (Sun)",title:"Travel (ATL → ORD)",subtitle:"Travel Day - Depart at 3:30pm",mapCenter:{lat:33.5,lng:-85.5},zoom:6,travelBlocks:[{icon:"✈️",title:"Flight: ATL → Chicago (ORD)",info:"Depart 3:30pm<br>United/American Airlines<br>~2.5 hour flight"}],stops:[{num:1,name:"Hartsfield-Jackson ATL",lat:33.6407,lng:-84.4277,time:"3:30 pm",color:"#1a73e8",emoji:"✈️",query:"Hartsfield Jackson Atlanta International Airport",desc:"Depart from ATL. Check in 2 hours before. Eat before flight or grab airport food.",tags:[{l:"Departure",cls:"t-transport"}]},{num:2,name:"O'Hare ORD (Layover)",lat:41.9742,lng:-87.9073,time:"~6:00 pm",color:"#e65c00",emoji:"🛬",query:"O'Hare International Airport Chicago",desc:"Arrive Chicago. Connecting flight to Japan tomorrow. Grab dinner at ORD.",tags:[{l:"Layover",cls:"t-transport"}]}],notes:["Flight to Chicago. Eat before flight or grab airport food."]},
+  {dayNum:2,date:"May 25 (Mon)",title:"✈ → Tokyo",subtitle:"Travel Day - Arrive Tokyo 9:15pm",mapCenter:{lat:35.68,lng:139.69},zoom:11,travelBlocks:[{icon:"✈️",title:"Flight: ORD → Haneda",info:"Depart ~8:00pm<br>~12 hour flight<br>Arrive Tokyo 9:15pm (next day)"}],stops:[{num:1,name:"O'Hare ORD",lat:41.9742,lng:-87.9073,time:"~7:00 am",color:"#1a73e8",emoji:"✈️",query:"O'Hare International Airport Chicago",desc:"Depart for Tokyo. In-flight meal service. Long flight ahead!",tags:[{l:"Departure",cls:"t-transport"}]},{num:2,name:"Haneda Airport (Arrive)",lat:35.5494,lng:139.7798,time:"9:15 pm",color:"#e65c00",emoji:"🛬",query:"Haneda Airport Tokyo Japan",desc:"Arrive Tokyo after long flight. Collect baggage, clear customs. Feeling jet-lagged but excited!",tags:[{l:"Arrival",cls:"t-transport"}]},{num:3,name:"Grand Monday Ginza (Check-in)",lat:35.6694,lng:139.7649,time:"~11:00 pm",color:"#ff9800",emoji:"🏨",query:"Grand Monday Ginza Tokyo",desc:"Hotel in Ginza. Check-in around 11pm. Rest & recover from flight.",tags:[{l:"Hotel",cls:"t-hotel"}]},{num:4,name:"Nearby Konbini",lat:35.6700,lng:139.7660,time:"11:30 pm",color:"#4caf50",emoji:"🏪",query:"7-Eleven Lawson Ginza Tokyo",desc:"Quick snack run. 7-Eleven & Lawson within 2 min walk. Grab water & snacks.",tags:[{l:"Food",cls:"t-food"}]}],notes:["Rest & recover. Nearest konbini: 7-Eleven & Lawson within 2 min walk."]},
+  {dayNum:3,date:"May 26 (Tue)",title:"Tokyo",subtitle:"Asakusa (Senso-ji) + Kirby Café @ Skytree",mapCenter:{lat:35.73,lng:139.80},zoom:13,travelBlocks:[{icon:"🚇",title:"Ginza → Asakusa",info:"Train: ~15 min<br>9:00am depart for Asakusa"},{icon:"🚄",title:"Asakusa → Tokyo Skytree",info:"Walk or train: ~25 min<br>12:00pm head to Skytree"},{icon:"🚇",title:"Skytree → Ginza",info:"Train: ~20 min<br>5:30pm return to hotel area"}],stops:[{num:1,name:"Grand Monday Ginza",lat:35.6694,lng:139.7649,time:"Start",color:"#e65c00",emoji:"🏨",query:"Premium Apart Monday Ginza Tokyo",desc:"Premium Apart Monday Ginza. Your base in central Tokyo — walking distance to Ginza shops, Tsukiji area & Tokyo Station.",tags:[{l:"Hotel",cls:"t-hotel"}]},{num:2,name:"Senso-ji Temple",lat:35.7148,lng:139.7967,time:"9:30 am",color:"#1a73e8",emoji:"⛩️",query:"Senso-ji Temple Asakusa Tokyo",desc:"Oldest temple in Tokyo. Arrive early. Kaminarimon gate, Nakamise shopping street. Famous incense ritual.",tags:[{l:"Activity",cls:"t-activity"},{l:"~1.5 hrs",cls:"t-transport"}]},{num:3,name:"Tokyo Skytree",lat:35.7101,lng:139.8107,time:"12:00 pm",color:"#e65c00",emoji:"🗼",query:"Tokyo Skytree Tokyo Japan",desc:"Tallest structure in Japan. Crowds build up after lunch.",tags:[{l:"Activity",cls:"t-activity"}]},{num:4,name:"Kirby Café (Skytree)",lat:35.7097,lng:139.8102,time:"12:30 pm",color:"#9c27b0",emoji:"🍰",query:"Kirby Cafe Tokyo Solamachi Level 4",desc:"Cute themed café on Level 4 of Tokyo Solamachi. Pink Kirby desserts & food.",tags:[{l:"Food",cls:"t-food"},{l:"⚠️ Reservation required",cls:"t-warn"}]},{num:5,name:"Ginza (Dinner)",lat:35.6694,lng:139.7649,time:"6:00 pm",color:"#c0392b",emoji:"🍽️",query:"Ginza Tokyo Japan restaurants",desc:"Return to Ginza for dinner. Explore local restaurants.",tags:[{l:"Food",cls:"t-food"}]},{num:6,name:"Henri Charpentier (Dessert)",lat:35.6740,lng:139.7654,time:"7:30 pm",color:"#e91e63",emoji:"🍰",query:"Henri Charpentier Ginza Tokyo",desc:"Luxury confectionery & café. Perfect dessert spot in Ginza.",tags:[{l:"Dessert",cls:"t-food"}]}],notes:["Kirby Café: book at kirbycafe.jp. Keep it relaxed — still jet-lagged."]},
+  {dayNum:4,date:"May 27 (Wed)",title:"Tokyo",subtitle:"KidZania Tokyo (Toyosu)",mapCenter:{lat:35.66,lng:139.78},zoom:13,travelBlocks:[{icon:"🚇",title:"Ginza → Toyosu",info:"Yurakucho Line: ~20 min<br>8:15am depart for Toyosu"},{icon:"🏢",title:"KidZania Tokyo",info:"9:00am–1:00pm<br>Interactive job experience for kids<br>Session 1: 9am–3pm (4 hrs is plenty)"}],stops:[{num:1,name:"Grand Monday Ginza",lat:35.6694,lng:139.7649,time:"Start",color:"#e65c00",emoji:"🏨",query:"Premium Apart Monday Ginza Tokyo",desc:"Premium Apart Monday Ginza. Your base in central Tokyo — walking distance to Ginza shops, Tsukiji area & Tokyo Station.",tags:[{l:"Hotel",cls:"t-hotel"}]},{num:2,name:"KidZania Tokyo",lat:35.6470,lng:139.7945,time:"9:00 am",color:"#1a73e8",emoji:"🎪",query:"KidZania Tokyo Toyosu",desc:"Interactive experience center where kids try 100+ real-world jobs & activities. 4 floors of fun! Allow ~4 hrs.",tags:[{l:"Activity",cls:"t-activity"},{l:"Book in advance",cls:"t-warn"}]},{num:3,name:"Lunch at KidZania",lat:35.6470,lng:139.7945,time:"12:00 pm",color:"#c0392b",emoji:"🍜",query:"KidZania Tokyo Toyosu food",desc:"MOS Burger, Pizza-la, RF1 inside KidZania. Or head to Lalaport Toyosu food court nearby (ramen, curry, udon).",tags:[{l:"Lunch",cls:"t-food"}]},{num:4,name:"Tsukiji Outer Market",lat:35.6654,lng:139.7707,time:"5:30 pm",color:"#ff9800",emoji:"🍣",query:"Tsukiji Outer Market Tokyo",desc:"Famous seafood market area. Restaurants open for dinner — fresh sushi, tamagoyaki, seafood bowls.",tags:[{l:"Dinner",cls:"t-food"}]},{num:5,name:"Return to Ginza",lat:35.6694,lng:139.7649,time:"7:30 pm",color:"#2196f3",emoji:"🏨",query:"Ginza Tokyo",desc:"Return to hotel area. Relax after a full day.",tags:[{l:"Rest",cls:"t-hotel"}]}],notes:["Book KidZania timed tickets in advance","Lalaport Toyosu food court is next door if kids want more lunch options","Tsukiji restaurants open for dinner even though market shops close at 2pm"]},
+  {dayNum:5,date:"May 28 (Thu)",title:"Tokyo",subtitle:"Tokyo DisneySea (full day)",mapCenter:{lat:35.63,lng:139.89},zoom:12,travelBlocks:[{icon:"🚄",title:"Morning Train to DisneySea",info:"6:30am wake<br>7:15am depart<br>JR Keiyo Line Tokyo → Maihama (~20 min)"},{icon:"🎡",title:"DisneySea Full Day",info:"8am–8:30pm<br>Park gates close, return to hotel"}],stops:[{num:1,name:"Grand Monday Ginza",lat:35.6694,lng:139.7649,time:"Start",color:"#e65c00",emoji:"🏨",query:"Premium Apart Monday Ginza Tokyo",desc:"Premium Apart Monday Ginza. Your base in central Tokyo — walking distance to Ginza shops, Tsukiji area & Tokyo Station.",tags:[{l:"Hotel",cls:"t-hotel"}]},{num:2,name:"DisneySea Entrance",lat:35.6267,lng:139.8850,time:"8:00 am",color:"#1a73e8",emoji:"🎢",query:"Tokyo DisneySea Tokyo",desc:"Arrive at gates. Download DPA app for wait times. Enter Mermaid Lagoon first!",tags:[{l:"Activity",cls:"t-activity"},{l:"Full day",cls:"t-transport"}]},{num:3,name:"Mermaid Lagoon Area",lat:35.6270,lng:139.8835,time:"8:30 am",color:"#e91e63",emoji:"🧜",query:"Tokyo DisneySea Mermaid Lagoon",desc:"Start here for shorter lines. Ariel's Grotto and other attractions.",tags:[{l:"Activity",cls:"t-activity"}]},{num:4,name:"Lunch Area",lat:35.6265,lng:139.8855,time:"12:00 pm",color:"#c0392b",emoji:"🍔",query:"Tokyo DisneySea food restaurants",desc:"Various themed restaurants throughout park. Grab lunch.",tags:[{l:"Food",cls:"t-food"}]},{num:5,name:"Indiana Jones Adventure",lat:35.6260,lng:139.8800,time:"1:30 pm",color:"#ff9800",emoji:"🎪",query:"Tokyo DisneySea Indiana Jones",desc:"Popular dark ride. Check wait times on DPA.",tags:[{l:"Activity",cls:"t-activity"}]},{num:6,name:"Toy Story Mania & Other Rides",lat:35.6275,lng:139.8880,time:"3:00 pm",color:"#00bcd4",emoji:"🎯",query:"Tokyo DisneySea Toy Story Mania",desc:"Multiple attractions. Sindbad's Storybook Voyage is also great.",tags:[{l:"Activity",cls:"t-activity"}]},{num:7,name:"Dinner in Park",lat:35.6270,lng:139.8850,time:"5:30 pm",color:"#4caf50",emoji:"🍽️",query:"Tokyo DisneySea restaurants",desc:"Dinner before evening show.",tags:[{l:"Food",cls:"t-food"}]},{num:8,name:"Fantasmic! & Believe! Show",lat:35.6265,lng:139.8810,time:"7:00 pm",color:"#9c27b0",emoji:"✨",query:"Tokyo DisneySea Fantasmic show",desc:"Evening entertainment. Spectacular light & water show.",tags:[{l:"Show",cls:"t-activity"}]},{num:9,name:"Return to Ginza",lat:35.6694,lng:139.7649,time:"9:30 pm",color:"#2196f3",emoji:"🏨",query:"Ginza Tokyo",desc:"Depart park, return to hotel.",tags:[{l:"Rest",cls:"t-activity"}]}],notes:["Download app for DPA (wait times). Full day activity!"]},
+  {dayNum:6,date:"May 29 (Fri)",title:"Tokyo",subtitle:"Tokyo Disneyland (full day)",mapCenter:{lat:35.63,lng:139.88},zoom:12,travelBlocks:[{icon:"🚄",title:"Morning Train to Disneyland",info:"6:30am wake<br>7:15am depart<br>JR Keiyo Line Tokyo → Maihama (~20 min)"},{icon:"🏰",title:"Disneyland Full Day",info:"8am–8:30pm<br>Park gates close"}],stops:[{num:1,name:"Grand Monday Ginza",lat:35.6694,lng:139.7649,time:"Start",color:"#e65c00",emoji:"🏨",query:"Premium Apart Monday Ginza Tokyo",desc:"Premium Apart Monday Ginza. Your base in central Tokyo — walking distance to Ginza shops, Tsukiji area & Tokyo Station.",tags:[{l:"Hotel",cls:"t-hotel"}]},{num:2,name:"Tokyo Disneyland Entrance",lat:35.6329,lng:139.8804,time:"8:00 am",color:"#1a73e8",emoji:"🏰",query:"Tokyo Disneyland Tokyo",desc:"Iconic pink castle. Arrive early for shortest lines. Download DPA app.",tags:[{l:"Activity",cls:"t-activity"},{l:"Full day",cls:"t-transport"}]},{num:3,name:"Toontown Area",lat:35.6295,lng:139.8825,time:"9:00 am",color:"#ff5722",emoji:"🎠",query:"Tokyo Disneyland Toontown",desc:"Mickey-themed area. Bring stroller for 3yo. Gentle rides for little ones.",tags:[{l:"Activity",cls:"t-activity"}]},{num:4,name:"Splash Mountain & Space Mountain",lat:35.6340,lng:139.8780,time:"11:00 am",color:"#00bcd4",emoji:"🎢",query:"Tokyo Disneyland Splash Mountain",desc:"Popular attractions. Check wait times on app.",tags:[{l:"Activity",cls:"t-activity"}]},{num:5,name:"Lunch",lat:35.6330,lng:139.8810,time:"12:00 pm",color:"#c0392b",emoji:"🍟",query:"Tokyo Disneyland food restaurants",desc:"Various themed restaurants. Try Pooh's Corner for cute food.",tags:[{l:"Food",cls:"t-food"}]},{num:6,name:"Parade at 3:30pm",lat:35.6320,lng:139.8800,time:"3:00 pm",color:"#e91e63",emoji:"✨",query:"Tokyo Disneyland parade",desc:"Daily parade. Stake out a good spot with stroller.",tags:[{l:"Show",cls:"t-activity"}]},{num:7,name:"Dinner",lat:35.6330,lng:139.8810,time:"5:00 pm",color:"#4caf50",emoji:"🍽️",query:"Tokyo Disneyland restaurants",desc:"Evening meal before Electrical Parade.",tags:[{l:"Food",cls:"t-food"}]},{num:8,name:"Electrical Parade",lat:35.6325,lng:139.8805,time:"7:00 pm",color:"#9c27b0",emoji:"💡",query:"Tokyo Disneyland Electrical Parade",desc:"Glittering nighttime parade. Magical!",tags:[{l:"Show",cls:"t-activity"}]},{num:9,name:"Return to Ginza",lat:35.6694,lng:139.7649,time:"9:30 pm",color:"#2196f3",emoji:"🏨",query:"Ginza Tokyo",desc:"Head back to hotel after full day.",tags:[{l:"Rest",cls:"t-activity"}]}],notes:["Bring stroller for 3yo. Download app for DPA."]},
+  {dayNum:7,date:"May 30 (Sat)",title:"Tokyo",subtitle:"Pignic Café + Shibuya PARCO + Zauo Fishing Dinner",mapCenter:{lat:35.665,lng:139.700},zoom:14,travelBlocks:[{icon:"🚇",title:"Ginza → Tomigaya (Yoyogi)",info:"Metro: ~25 min<br>9:00am depart for Pignic Café"},{icon:"🚶",title:"Tomigaya → Shibuya PARCO",info:"Walk: ~20 min (or 1 stop train)<br>After Pignic, head to Shibuya"},{icon:"🚇",title:"Shibuya → Ginza",info:"Ginza Line: ~20 min direct<br>Return to hotel after dinner"}],stops:[{num:1,name:"Grand Monday Ginza",lat:35.6694,lng:139.7649,time:"Start",color:"#e65c00",emoji:"🏨",query:"Premium Apart Monday Ginza Tokyo",desc:"Premium Apart Monday Ginza. Your base in central Tokyo.",tags:[{l:"Hotel",cls:"t-hotel"}]},{num:2,name:"Breakfast near Tomigaya",lat:35.6672,lng:139.6870,time:"9:15 am",color:"#00838f",emoji:"☕",query:"Fuglen Tokyo Tomigaya coffee",desc:"Konbini breakfast or coffee near the café. Try Fuglen Tokyo (Norwegian specialty coffee) nearby.",tags:[{l:"Breakfast",cls:"t-food"}]},{num:3,name:"Pignic Café (Pig Café) 🐷",lat:35.6670,lng:139.6880,time:"10:00 am",color:"#e91e63",emoji:"🐷",query:"pignic cafe Yoyogi Park Tomigaya Tokyo",desc:"60-min session with miniature pigs! Sasaki Park store, Tomigaya 1-17-3, 3A Terrace 2F. Booking: Mike Tang, 6 guests (3 kids). Light snacks available. ☎ 03-6407-0200.",tags:[{l:"Activity",cls:"t-activity"},{l:"✅ Booked 10:00am",cls:"t-warn"}]},{num:4,name:"Walk/Train to Shibuya",lat:35.6620,lng:139.6990,time:"12:00 pm",color:"#1a73e8",emoji:"🚶",query:"Shibuya PARCO Tokyo",desc:"After Pignic, head to Shibuya — walk through Yoyogi Park (~20 min) or quick train. Heading to Shibuya PARCO area.",tags:[{l:"Transit",cls:"t-transport"}]},{num:5,name:"Kiwamiya Shibuya PARCO 🥩",lat:35.6614,lng:139.6975,time:"1:30 pm",color:"#c0392b",emoji:"🥩",query:"Kiwamiya Shibuya PARCO B1F",desc:"Late lunch at Kiwamiya — premium hamburg steak you grill yourself on a hot stone. B1F Shibuya PARCO. WALK-IN ONLY (no reservations). Expect a wait — get there at 1:30pm to dodge peak. ☎ 03-5422-3122.",tags:[{l:"Lunch",cls:"t-food"},{l:"Walk-in only",cls:"t-warn"}]},{num:6,name:"Shibuya PARCO + Pokémon Center",lat:35.6614,lng:139.6975,time:"2:30 pm",color:"#7b1fa2",emoji:"🛍️",query:"Pokemon Center Shibuya PARCO 6F",desc:"Explore Shibuya PARCO. Pokémon Center Shibuya on 6F — exclusive Japan merch the kids will love. Nintendo Tokyo and Capcom Store also on 6F!",tags:[{l:"Shopping",cls:"t-activity"},{l:"Pokémon 6F",cls:"t-transport"}]},{num:7,name:"Shibuya Crossing & Hachiko",lat:35.6595,lng:139.7004,time:"4:00 pm",color:"#1a73e8",emoji:"🚦",query:"Shibuya Crossing Hachiko",desc:"Walk over to the world's busiest crossing and grab a photo at the Hachiko statue. View the scramble from Starbucks or Mag's Park rooftop.",tags:[{l:"Activity",cls:"t-activity"}]},{num:8,name:"Zauo Shibuya 🎣",lat:35.6620,lng:139.6985,time:"5:30 pm",color:"#0277bd",emoji:"🎣",query:"Zauo Shibuya fishing restaurant Jinnan",desc:"Dinner at Zauo Shibuya — fishing restaurant where you catch your own fish from boats inside the restaurant! Super fun for kids. Jinnan 1-19-3, B1F. Reservations recommended via TableCheck/OpenTable. Open 5pm–11pm.",tags:[{l:"Dinner",cls:"t-food"},{l:"Kid-friendly",cls:"t-transport"}]},{num:9,name:"Return to Ginza",lat:35.6694,lng:139.7649,time:"8:00 pm",color:"#2196f3",emoji:"🏨",query:"Ginza Tokyo",desc:"Ginza Line from Shibuya to Ginza — ~20 min direct ride back to hotel.",tags:[{l:"Return",cls:"t-hotel"}]}],notes:["Pignic Café BOOKED: 10:00am, 6 guests (3 kids), 60-min session","Kiwamiya is WALK-IN ONLY — no reservations. B1F Shibuya PARCO. Aim for 1:30pm to avoid peak lunch rush","Snacks at Pignic Café = late lunch is fine","Zauo Shibuya: book ahead via TableCheck — fishing restaurant is super popular with families","Pokémon Center, Nintendo Tokyo, Capcom Store all on PARCO 6F","Shibuya → Ginza: direct on Ginza Line (~20 min)"]},
+  {dayNum:8,date:"May 31 (Sun)",title:"Tokyo → Atami",subtitle:"Atami + Footbath + Shōtengai + Sun Beach",mapCenter:{lat:35.11,lng:139.08},zoom:12,travelBlocks:[{icon:"🚄",title:"Shinkansen: Tokyo → Atami",info:"9:30am depart Tokyo<br>~50 min trip<br>Arrive Atami 10:20am"}],stops:[{num:1,name:"Grand Monday Ginza (Checkout)",lat:35.6694,lng:139.7649,time:"Morning",color:"#e65c00",emoji:"🏨",query:"Premium Apart Monday Ginza Tokyo",desc:"Check out of Grand Monday Ginza. Pack up and head to your next destination.",tags:[{l:"Checkout",cls:"t-hotel"}]},{num:2,name:"Ginza (Breakfast & Checkout)",lat:35.6694,lng:139.7649,time:"8:00 am",color:"#1a73e8",emoji:"🍽️",query:"Ginza Tokyo",desc:"Breakfast in Ginza. 9am checkout Grand Monday Ginza.",tags:[{l:"Food",cls:"t-food"},{l:"Checkout",cls:"t-hotel"}]},{num:3,name:"Tokyo Station (Shinkansen)",lat:35.6762,lng:139.7640,time:"9:15 am",color:"#ff9800",emoji:"🚉",query:"Tokyo Station",desc:"Head to Shinkansen platform. Buy ekiben (bento) before boarding.",tags:[{l:"Transport",cls:"t-transport"}]},{num:4,name:"Atami Station (Arrive)",lat:35.1041,lng:139.0778,time:"10:20 am",color:"#e65c00",emoji:"🚉",query:"Atami Station Atami Japan",desc:"Arrive Atami. Drop bags at Airbnb.",tags:[{l:"Arrival",cls:"t-transport"}]},{num:5,name:"Ieyasu-no-yu Footbath ♨️",lat:35.1048,lng:139.0782,time:"10:30 am",color:"#0288d1",emoji:"♨️",query:"Ieyasu no yu ashiyu Atami Station",desc:"Free outdoor footbath right next to Atami Station, built to commemorate Tokugawa Ieyasu's 1604 visit. Open ~9am–4pm. Bring a small towel! Perfect quick stop after the Shinkansen.",tags:[{l:"Onsen (foot)",cls:"t-activity"},{l:"Free",cls:"t-transport"}]},{num:6,name:"Wasyoku Kobayashi (Lunch) 🐟",lat:35.1042,lng:139.0790,time:"12:30 pm",color:"#c0392b",emoji:"🐟",query:"和食処こばやし 熱海銀座",desc:"Lunch on Atami Ginza shōtengai — locally famous for kinmedai (golden-eye snapper) rice bowls and grilled fish teishoku. Group-friendly tables.",tags:[{l:"Lunch",cls:"t-food"}]},{num:7,name:"Atami Sun Beach",lat:35.0944,lng:139.0780,time:"2:00 pm",color:"#00bcd4",emoji:"🏖️",query:"Atami Sun Beach Atami",desc:"Popular crescent beach. Kids wade in shallow water and play (~1.5 hrs).",tags:[{l:"Activity",cls:"t-activity"}]},{num:8,name:"Airbnb Check-in (Private Onsen)",lat:35.1055,lng:139.0815,time:"4:00 pm",color:"#e65c00",emoji:"🏠",query:"Atami Onsen Inn Kaikōchō",desc:"10-4 Kaikōchō. Conf: HM9DR4QJBS. 12-min walk from station. Private hot spring — soak before dinner!",tags:[{l:"Check-in",cls:"t-hotel"},{l:"Private onsen",cls:"t-activity"}]},{num:9,name:"Atami Ginza Shōtengai",lat:35.1042,lng:139.0795,time:"6:00 pm",color:"#ff9800",emoji:"🛍️",query:"Atami Ginza shoutengai shopping street",desc:"Stroll the covered arcade en route to dinner. Souvenirs, local snacks, atmosphere.",tags:[{l:"Shopping",cls:"t-activity"}]},{num:10,name:"Osakana Shokudō (Dinner) 🍣",lat:35.1045,lng:139.0788,time:"6:30 pm",color:"#4caf50",emoji:"🍣",query:"お魚食堂 熱海",desc:"Casual local seafood diner — fresh sashimi, kaisen-don, grilled fish, fried fish. Honest prices. Small shop (~20-25 seats), no reservations — may need to split into 2 tables.",tags:[{l:"Dinner",cls:"t-food"}]}],notes:["Conf: HM9DR4QJBS. Host: +81 80-7481-0428. 12-min walk from station. Private hot spring.","Ieyasu-no-yu: free outdoor footbath next to Atami Station. Bring a small towel!","Wasyoku Kobayashi: try the kinmedai-don — Atami specialty","Osakana Shokudō: walk-in only, ~20–25 seats — may seat party of 6 across 2 tables"]},
+  {dayNum:9,date:"Jun 1 (Mon)",title:"Atami",subtitle:"Kinomiya-jinja + Atami Ropeway/Castle + Sun Beach",mapCenter:{lat:35.0950,lng:139.0790},zoom:15,travelBlocks:[{icon:"🚠",title:"Day Activities",info:"Shrine in AM (1 stop on JR)<br>Ropeway + castle late AM<br>Beach + dinner near Airbnb"}],stops:[{num:1,name:"Airbnb — Private Onsen Inn",lat:35.10696660258816,lng:139.08190677324606,time:"Start",color:"#e65c00",emoji:"🏨",query:"Kaikocho Atami Shizuoka Japan",desc:"10-4 Kaikōchō, Atami. Private hot spring inn. Conf: HM9DR4QJBS.",tags:[{l:"Hotel",cls:"t-hotel"}]},{num:2,name:"Breakfast near Airbnb",lat:35.10696660258816,lng:139.08190677324606,time:"8:00 am",color:"#1a73e8",emoji:"🍽️",query:"Cafe RoCA Atami",desc:"Cafe RoCA (harborside), Komeda's Coffee Atami (morning set), or Maruten (fish cakes to-go).",tags:[{l:"Food",cls:"t-food"}]},{num:3,name:"Kinomiya-jinja (來宮神社)",lat:35.10055469937039,lng:139.0678814,time:"9:00 am",color:"#e91e63",emoji:"⛩️",query:"Kinomiya Shrine Atami",desc:"2,000-year-old sacred camphor tree (Ōkusu) — walk around it for a year of added life. Free. Take JR Itō Line 1 stop from Atami Stn to Kinomiya Stn (¥150) then 5 min walk. Kinomiya Cafe on grounds.",tags:[{l:"Shrine",cls:"t-activity"},{l:"Free",cls:"t-transport"}]},{num:4,name:"Atami Ropeway + Castle",lat:35.0887453061719,lng:139.07793334418116,time:"10:45 am",color:"#00bcd4",emoji:"🚠",query:"Atami Ropeway",desc:"3-min gondola ride (¥700 RT). Panoramic Sagami Bay views. Optional Atami Castle observation deck (¥1,100). ~1.5 hrs.",tags:[{l:"Activity",cls:"t-activity"},{l:"¥700 RT",cls:"t-transport"}]},{num:5,name:"Lunch near Sun Beach",lat:35.0978,lng:139.0772,time:"12:30 pm",color:"#c0392b",emoji:"🐟",query:"Izu Sakanadokoro Sakana Atami",desc:"Izu Sakanadokoro Sakana (kaisendon), Soba Kien, or Scotch Bank Atami (harbor views, easier to seat 6). Call ahead for party of 6.",tags:[{l:"Lunch",cls:"t-food"}]},{num:6,name:"Atami Sun Beach",lat:35.09824,lng:139.07686,time:"2:00 pm",color:"#00bcd4",emoji:"🏖️",query:"Atami Sun Beach",desc:"Palm-lined crescent beach. Stroll, gelato, optional Atami Korakuen day-onsen nearby. Linger til ~5pm or sunset (~6:15pm).",tags:[{l:"Beach",cls:"t-activity"}]},{num:7,name:"Dinner near Airbnb",lat:35.10696660258816,lng:139.08190677324606,time:"6:30 pm",color:"#4caf50",emoji:"🍣",query:"Izu-Tei Atami",desc:"Izu-Tei (kinmedai izakaya), Sushi Hane (reserve), or Trattoria Ortensia (Italian, easier for 6). Atami Pudding Cafe 2nd for dessert. 5-min walk from Airbnb.",tags:[{l:"Dinner",cls:"t-food"}]},{num:8,name:"Back to Airbnb",lat:35.10696660258816,lng:139.08190677324606,time:"8:00 pm",color:"#e65c00",emoji:"🏠",query:"Kaikocho Atami",desc:"5-min walk back. Soak in private onsen.",tags:[{l:"Hotel",cls:"t-hotel"}]}],notes:["Total walking ~3.5–4.5 km, all flat — ropeway handles elevation","Kiunkaku removed; Kinomiya better for groups (outdoor, free, easy regrouping)","Reserve dinner ahead for party of 6","JR Itō Line: Atami ↔ Kinomiya ¥150, 3 min — easier than taxis for 6 people"]},{dayNum:10,date:"Jun 2 (Tue)",title:"Atami → Kyoto",subtitle:"Shinkansen · Porta Dining Lunch · TeamLab Biovortex · Tajimaya Dinner",mapCenter:{lat:34.987,lng:135.760},zoom:15,travelBlocks:[{icon:"🚄",title:"Shinkansen: Atami → Kyoto",info:"Hikari · ~2h 15min · ~¥9,500–11,000/adult<br>Depart Atami ~10:00am · Arrive Kyoto 12:15pm<br>Tip: Buy ekiben (bento) at Atami Station before boarding!"},{icon:"🚶",title:"Kyoto Station → TeamLab",info:"~7 min walk from Hachijo East Gate<br>No transit needed!"}],stops:[{num:1,name:"Airbnb — Private Onsen Inn (Checkout)",lat:35.1005,lng:139.0755,time:"Morning",color:"#e65c00",emoji:"🏨",query:"Kaikocho Atami Shizuoka Japan",desc:"Check out of Atami Airbnb. Pack & head to Atami Station for Shinkansen to Kyoto.",tags:[{l:"Checkout",cls:"t-hotel"}]},{num:2,name:"Kyoto Station",lat:34.9858,lng:135.7582,time:"12:15pm",color:"#1a73e8",emoji:"🚉",query:"Kyoto Station Kyoto Japan",desc:"Major hub. Use coin lockers (¥300–600) to store bags. Head to Porta Dining for lunch.",tags:[{l:"Arrival",cls:"t-transport"},{l:"Coin lockers available",cls:"t-activity"}]},{num:3,name:"Lunch: Kyoto Porta Dining",lat:34.9855,lng:135.7588,time:"12:30pm",color:"#c0392b",emoji:"🍽️",query:"Kyoto Porta Dining underground restaurant Kyoto Station",desc:"Underground restaurant district inside Kyoto Station. 30+ restaurants — ramen, curry udon (try Mimikou!), tonkatsu, sushi, pasta & more. Easy & convenient right before TeamLab.",tags:[{l:"Lunch",cls:"t-food"},{l:"30+ restaurants",cls:"t-activity"},{l:"Kid-friendly",cls:"t-transport"}]},{num:4,name:"TeamLab Biovortex Kyoto",lat:34.9862,lng:135.7620,time:"3:30pm",color:"#7b1fa2",emoji:"🌀",query:"teamLab Biovortex Kyoto Japan",desc:"Cutting-edge immersive digital art museum. ~7 min walk from Kyoto Station Hachijo East Gate. Allow ~2 hrs. Booked for 3:30pm entry.",tags:[{l:"~2 hrs",cls:"t-activity"},{l:"✅ Booked 3:30pm",cls:"t-warn"}]},{num:5,name:"Dinner: Tajimaya Shabu Shabu",lat:35.0035,lng:135.7688,time:"6:00pm",color:"#c0392b",emoji:"🍲",query:"Tajimaya Shabu Shabu Edion Shijo Kawaramachi Kyoto",desc:"7F Edion Kyoto, Shijo-Kawaramachi. All-you-can-eat shabu-shabu & sukiyaki. Dinner ~¥2,500–3,500/person. Interactive cooking at the table — kids love it! 3 min walk from Kawaramachi Station.",tags:[{l:"Dinner",cls:"t-food"},{l:"~¥2,500–3,500",cls:"t-transport"},{l:"Kid-friendly",cls:"t-activity"}]},{num:6,name:"Airbnb Check-in",lat:35.00150697281431,lng:135.7657331825831,time:"7:30pm",color:"#e65c00",emoji:"🔑",query:"Shijo Kawaramachi Kyoto Japan",desc:"Check in after dinner. 4-bed/3-bath apt, steps from Tajimaya. Host: +81 80-6852-1688. Conf: HMHHXKHC5A. Drop bags, freshen up, settle in for the night.",tags:[{l:"Check-in",cls:"t-hotel"}]}],notes:["Kyoto Porta Dining: underground restaurant district inside Kyoto Station, 30+ options","Mimikou curry udon is a Kyoto Station highlight (expect 20-30 min wait)","TeamLab Biovortex: Booked 3:30pm. ~7 min walk from Hachijo East Gate — no transit needed from lunch!","Tajimaya Shabu Shabu: 7F Edion Kyoto, dinner 4pm–11pm, all-you-can-eat ~¥2,500–3,500"]},
+  {dayNum:11,date:"Jun 3 (Wed)",title:"Kyoto",subtitle:"Fushimi Inari + Kiyomizudera (kimono) + Higashiyama + Gion",mapCenter:{lat:34.95,lng:135.79},zoom:13,travelBlocks:[{icon:"🚇",title:"Early Start to Fushimi",info:"6:30am wake<br>7am train to Fushimi Inari<br>Arrive before 8am for fewer crowds"},{icon:"🚇",title:"Fushimi → Kiyomizudera",info:"9am depart<br>Train+walk ~30 min<br>Kimono rental near Kiyomizudera"},{icon:"🚇",title:"Evening Return",info:"6:30pm head back<br>Relax or Pokémon Center<br>Pontocho dinner"}],stops:[{num:1,name:"Airbnb — Shijō-Kawaramachi",lat:35.00150697281431,lng:135.7657331825831,time:"Start",color:"#e65c00",emoji:"🏨",query:"Shijo Kawaramachi Kyoto Japan",desc:"麩屋町通高辻, near Shijō-Kawaramachi. 4-bed/3-bath apt, steps from Nishiki Market. Conf: HMHHXKHC5A.",tags:[{l:"Hotel",cls:"t-hotel"}]},{num:2,name:"Fushimi Inari Shrine",lat:34.9671,lng:135.7727,time:"7:00 am",color:"#1a73e8",emoji:"⛩️",query:"Fushimi Inari Shrine Kyoto",desc:"Iconic shrine with 10,000+ vermillion torii gates. Arrive early to beat crowds. ~45 min loop hike.",tags:[{l:"Activity",cls:"t-activity"},{l:"Early start",cls:"t-transport"}]},{num:3,name:"Kimono Rental (Kiyomizudera)",lat:34.9949,lng:135.7850,time:"9:30 am",color:"#ff9800",emoji:"👘",query:"Kimono rental Kiyomizudera Kyoto",desc:"Rent traditional kimono. ~¥3,000–5,000/person. Perfect for temple photos!",tags:[{l:"Activity",cls:"t-activity"},{l:"~¥3,000–5,000",cls:"t-transport"}]},{num:4,name:"Kiyomizudera Temple",lat:34.9949,lng:135.7850,time:"10:00 am",color:"#c0392b",emoji:"🏯",query:"Kiyomizudera Temple Kyoto",desc:"UNESCO temple. Opens 6am. Wooden stage with city views. Kimono visitors welcome!",tags:[{l:"Activity",cls:"t-activity"},{l:"UNESCO site",cls:"t-transport"}]},{num:5,name:"Lunch (Higashiyama)",lat:34.9930,lng:135.7850,time:"12:00 pm",color:"#4caf50",emoji:"🍜",query:"Higashiyama Kyoto restaurants",desc:"Traditional Kyoto cuisine. Soba, kaiseki, or casual dining.",tags:[{l:"Food",cls:"t-food"}]},{num:6,name:"Sannenzaka & Ninenzaka Lanes",lat:34.9940,lng:135.7860,time:"1:00 pm",color:"#e91e63",emoji:"🛍️",query:"Sannenzaka Ninenzaka Kyoto",desc:"Historic shopping streets. Souvenir shops, tea houses, traditional goods.",tags:[{l:"Shopping",cls:"t-activity"}]},{num:7,name:"Yasaka Pagoda",lat:34.9952,lng:135.7867,time:"2:00 pm",color:"#00bcd4",emoji:"🏯",query:"Yasaka Pagoda Higashiyama Kyoto",desc:"Iconic 5-story pagoda. Great photo spot with kimono!",tags:[{l:"Activity",cls:"t-activity"}]},{num:8,name:"Maruyama Park",lat:34.9950,lng:135.7895,time:"2:30 pm",color:"#2196f3",emoji:"🌳",query:"Maruyama Park Kyoto",desc:"Peaceful park. Rest & relax.",tags:[{l:"Activity",cls:"t-activity"}]},{num:9,name:"Yasaka Shrine",lat:34.9948,lng:135.7883,time:"3:00 pm",color:"#9c27b0",emoji:"⛩️",query:"Yasaka Shrine Kyoto",desc:"Beautiful shrine. Kimono tourists love this spot!",tags:[{l:"Activity",cls:"t-activity"}]},{num:10,name:"Hanamikoji Street (Gion)",lat:34.9980,lng:135.7950,time:"4:00 pm",color:"#ff5722",emoji:"🌸",query:"Hanamikoji Gion Kyoto",desc:"Geisha district. Wooden machiya houses. Best at dusk for geisha sightings.",tags:[{l:"Activity",cls:"t-activity"}]},{num:11,name:"Pokémon Center Kyoto (optional)",lat:35.0050,lng:135.7690,time:"5:30 pm",color:"#ffeb3b",emoji:"⚡",query:"Pokemon Center Kyoto",desc:"If energy permits. Pokémon merchandise.",tags:[{l:"Activity",cls:"t-activity"}]},{num:12,name:"Pontocho Alley Dinner",lat:34.9980,lng:135.7900,time:"6:30 pm",color:"#4caf50",emoji:"🍽️",query:"Pontocho alley Kyoto restaurants",desc:"Atmospheric alley along river. Traditional Kyoto kaiseki & casual dining.",tags:[{l:"Food",cls:"t-food"},{l:"Romantic",cls:"t-transport"}]},{num:13,name:"Kamo River Walk",lat:34.9990,lng:135.7920,time:"8:30 pm",color:"#673ab7",emoji:"🌙",query:"Kamo River Kyoto",desc:"Evening walk along scenic river. Peaceful end to day.",tags:[{l:"Activity",cls:"t-activity"}]}],notes:["Wear comfortable shoes. Stroller difficult on slopes. Kimono ~¥3,000–5,000/person."]},
+  {dayNum:12,date:"Jun 4 (Thu)",title:"Kyoto → Osaka",subtitle:"Travel to Osaka + Dotonbori + Shinsaibashi + Park Front Hotel",mapCenter:{lat:34.67,lng:135.48},zoom:12,travelBlocks:[{icon:"🚄",title:"Train: Kyoto → Osaka",info:"Hankyu Railway: ~45 min<br>Depart ~11am<br>¥410 per person"},{icon:"🚇",title:"Namba → Universal City",info:"~30 min by train<br>Head to hotel after sightseeing"}],stops:[{num:1,name:"Airbnb — Shijō-Kawaramachi (Checkout)",lat:35.00150697281431,lng:135.7657331825831,time:"Morning",color:"#e65c00",emoji:"🏨",query:"Shijo Kawaramachi Kyoto Japan",desc:"Check out of Kyoto Airbnb. Last-minute Kyoto souvenirs before heading to Osaka.",tags:[{l:"Checkout",cls:"t-hotel"}]},{num:2,name:"Osaka Station (Arrive)",lat:34.7036,lng:135.4949,time:"12:00 pm",color:"#ff9800",emoji:"🚉",query:"Osaka Station Umeda",desc:"Arrive Osaka-Umeda via Hankyu. Store bags in coin lockers.",tags:[{l:"Arrival",cls:"t-transport"},{l:"Coin lockers",cls:"t-activity"}]},{num:3,name:"Lunch (Umeda)",lat:34.7036,lng:135.4949,time:"12:30 pm",color:"#c0392b",emoji:"🍜",query:"Umeda Food Hall Osaka restaurants",desc:"Lunch in the Umeda area — dept store food halls or nearby restaurants.",tags:[{l:"Food",cls:"t-food"}]},{num:4,name:"Dotonbori (Afternoon)",lat:34.6687,lng:135.5013,time:"2:00 pm",color:"#e91e63",emoji:"🌟",query:"Dotonbori Osaka",desc:"Famous food & entertainment district. Glico Running Man sign. Takoyaki shops everywhere!",tags:[{l:"Activity",cls:"t-activity"},{l:"Food",cls:"t-food"}]},{num:5,name:"Shinsaibashi Shopping Arcade",lat:34.6676,lng:135.5043,time:"3:30 pm",color:"#00bcd4",emoji:"🛍️",query:"Shinsaibashi Osaka",desc:"Long covered shopping arcade with fashion, brands, souvenirs.",tags:[{l:"Shopping",cls:"t-activity"}]},{num:6,name:"Park Front Hotel Check-in",lat:34.6680,lng:135.4340,time:"5:30 pm",color:"#e65c00",emoji:"🏨",query:"The Park Front Hotel Universal Studios Japan Osaka",desc:"The Park Front Hotel at Universal Studios Japan. 6-2-52 Shimaya, Konohana-ku. Check-in from 3pm. Right across from USJ entrance!",tags:[{l:"Check-in",cls:"t-hotel"}]},{num:7,name:"Dinner at Universal CityWalk",lat:34.6670,lng:135.4330,time:"6:30 pm",color:"#ff9800",emoji:"🍽️",query:"Universal CityWalk Osaka restaurants",desc:"Family restaurants right outside USJ gates. Great variety — casual dining, ramen, burgers & more.",tags:[{l:"Food",cls:"t-food"}]}],notes:["Park Front Hotel: 6-2-52 Shimaya, Konohana-ku. Check-in 3pm / Check-out 12pm","Right across from USJ entrance — perfect for early park entry tomorrow!","Coin lockers at Osaka Station for bags while sightseeing"]},
+  {dayNum:13,date:"Jun 5 (Fri)",title:"Osaka",subtitle:"Universal Studios Japan (full day)",mapCenter:{lat:34.665,lng:135.432},zoom:15,travelBlocks:[{icon:"🚶",title:"Hotel → USJ",info:"~2 min walk from Park Front Hotel!<br>6am wake · 7am at gates"}],stops:[{num:1,name:"Park Front Hotel",lat:34.6680,lng:135.4340,time:"Start",color:"#e65c00",emoji:"🏨",query:"The Park Front Hotel Universal Studios Japan Osaka",desc:"The Park Front Hotel at Universal Studios Japan. Right across from USJ entrance — just walk over!",tags:[{l:"Hotel",cls:"t-hotel"}]},{num:2,name:"USJ Entrance",lat:34.6654,lng:135.4323,time:"7:00 am",color:"#1a73e8",emoji:"🎢",query:"Universal Studios Japan",desc:"~2 min walk from hotel! Arrive at gates early. Download app for wait times. Buy Express Passes if not already purchased!",tags:[{l:"Activity",cls:"t-activity"},{l:"Full day",cls:"t-transport"}]},{num:3,name:"Super Nintendo World",lat:34.6660,lng:135.4320,time:"9:00 am",color:"#e91e63",emoji:"🎮",query:"Universal Studios Japan Super Nintendo World",desc:"Head here first — most popular, long waits later. Mario Kart ride. Interactive experiences. Get timed entry wristband if needed.",tags:[{l:"Activity",cls:"t-activity"}]},{num:4,name:"Lunch in Park",lat:34.6670,lng:135.4330,time:"12:00 pm",color:"#c0392b",emoji:"🍔",query:"Universal Studios Japan restaurants",desc:"Kinopio's Café in Super Nintendo World or Three Broomsticks in Harry Potter area.",tags:[{l:"Food",cls:"t-food"}]},{num:5,name:"Wizarding World of Harry Potter",lat:34.6650,lng:135.4300,time:"1:30 pm",color:"#9c27b0",emoji:"⚡",query:"Universal Studios Japan Harry Potter",desc:"Immersive themed area. Butterbeer. Wand dueling. Book Express Pass!",tags:[{l:"Activity",cls:"t-activity"}]},{num:6,name:"Minion Park & Toy Story",lat:34.6645,lng:135.4315,time:"3:00 pm",color:"#ffeb3b",emoji:"🦀",query:"Universal Studios Japan Minions",desc:"Minion Mayhem & Toy Story attractions.",tags:[{l:"Activity",cls:"t-activity"}]},{num:7,name:"Wonderland for 3yo",lat:34.6670,lng:135.4340,time:"4:00 pm",color:"#00bcd4",emoji:"🎡",query:"Universal Studios Japan kids",desc:"Gentle rides for little ones. Elmo, Snoopy areas — no height restrictions.",tags:[{l:"Activity",cls:"t-activity"}]},{num:8,name:"Dinner in Park",lat:34.6670,lng:135.4330,time:"5:30 pm",color:"#4caf50",emoji:"🍽️",query:"Universal Studios Japan restaurants",desc:"Evening meal before shows. Mel's Drive-In (burgers, 50s diner) or eat after at Universal CityWalk.",tags:[{l:"Food",cls:"t-food"}]},{num:9,name:"Evening Shows & Events",lat:34.6665,lng:135.4325,time:"7:00 pm",color:"#673ab7",emoji:"✨",query:"Universal Studios Japan shows",desc:"Special event shows & entertainment. Park typically closes 7-9pm.",tags:[{l:"Show",cls:"t-activity"}]},{num:10,name:"Walk back to Hotel",lat:34.6680,lng:135.4340,time:"8:00 pm",color:"#2196f3",emoji:"🏨",query:"The Park Front Hotel Universal Studios Japan",desc:"~2 min walk back to Park Front Hotel. Collapse!",tags:[{l:"Rest",cls:"t-hotel"}]}],notes:["Park Front Hotel is ~2 min walk from USJ gates — no train needed!","Buy Express Passes in advance — they sell out!","Wonderland area = toddler paradise, no height restrictions"]},
+  {dayNum:14,date:"Jun 6 (Sat)",title:"Osaka",subtitle:"Osaka Aquarium Kaiyukan + Pokémon Centers + Dotonbori",mapCenter:{lat:34.66,lng:135.47},zoom:12,travelBlocks:[{icon:"🚇",title:"Universal City → Tempozan",info:"JR to Nishikujo → Loop Line to Bentencho<br>→ Chuo Line to Osakako (~20 min)"},{icon:"🚇",title:"Tempozan → Shinsaibashi",info:"Chuo Line to Honmachi<br>→ Midosuji Line to Shinsaibashi (~20 min)"}],stops:[{num:1,name:"Park Front Hotel",lat:34.6680,lng:135.4340,time:"Start",color:"#e65c00",emoji:"🏨",query:"The Park Front Hotel Universal Studios Japan Osaka",desc:"The Park Front Hotel at Universal Studios Japan. Relaxed morning — recovery from USJ! Check-out 12pm tomorrow.",tags:[{l:"Hotel",cls:"t-hotel"}]},{num:2,name:"Osaka Aquarium Kaiyukan",lat:34.6545,lng:135.4290,time:"10:15 am",color:"#1a73e8",emoji:"🐳",query:"Osaka Aquarium Kaiyukan",desc:"World-class aquarium. Whale sharks, jellyfish, touch pools. 3yo free! ~20 min from Universal City Station.",tags:[{l:"Activity",cls:"t-activity"},{l:"3yo free",cls:"t-transport"}]},{num:3,name:"Lunch (Tempozan)",lat:34.6555,lng:135.4300,time:"12:30 pm",color:"#c0392b",emoji:"🍜",query:"Tempozan Marketplace Naniwa Kuishinbo Yokocho",desc:"Naniwa Kuishinbo Yokocho food court — retro 1965 Osaka streetscape. Okonomiyaki, takoyaki, noodles.",tags:[{l:"Food",cls:"t-food"}]},{num:4,name:"Pokémon Center Osaka DX",lat:34.6620,lng:135.5115,time:"2:00 pm",color:"#ffeb3b",emoji:"⚡",query:"Pokemon Center Osaka DX Daimaru Shinsaibashi",desc:"Daimaru Shinsaibashi 9F. Huge Pokémon merchandise selection + Pokémon Café (reserve separately)!",tags:[{l:"Activity",cls:"t-activity"}]},{num:5,name:"Nintendo Osaka",lat:34.6620,lng:135.5115,time:"3:30 pm",color:"#e91e63",emoji:"🎮",query:"Nintendo Osaka Daimaru",desc:"Daimaru 13F. Nintendo products & exclusives.",tags:[{l:"Activity",cls:"t-activity"}]},{num:6,name:"Shinsaibashi Shopping",lat:34.6676,lng:135.5043,time:"4:00 pm",color:"#00bcd4",emoji:"🛍️",query:"Shinsaibashi Osaka",desc:"Browse the covered shopping arcade.",tags:[{l:"Shopping",cls:"t-activity"}]},{num:7,name:"Return to Hotel & Rest",lat:34.6680,lng:135.4340,time:"5:30 pm",color:"#2196f3",emoji:"🏨",query:"The Park Front Hotel Universal Studios Japan",desc:"Head back to Park Front Hotel. Rest up before dinner.",tags:[{l:"Rest",cls:"t-hotel"}]},{num:8,name:"Last Osaka Dinner",lat:34.6670,lng:135.4330,time:"7:00 pm",color:"#ff9800",emoji:"🍽️",query:"Universal CityWalk Osaka restaurants",desc:"Farewell Osaka dinner — Universal CityWalk or head to Dotonbori for one last round of street food!",tags:[{l:"Food",cls:"t-food"},{l:"Farewell",cls:"t-transport"}]}],notes:["3yo free at Kaiyukan. Same-day re-entry allowed.","Kaiyukan is only ~20 min from Universal City Station — convenient from hotel!","Pack for Tokyo tonight. Check-out 12pm tomorrow."]},
+  {dayNum:15,date:"Jun 7 (Sun)",title:"Osaka → Tokyo",subtitle:"Travel to Tokyo + Ikebukuro (Gashapon + Capybara Café + Sunshine City)",mapCenter:{lat:35.73,lng:139.72},zoom:13,travelBlocks:[{icon:"🚄",title:"Shinkansen: Shin-Osaka → Tokyo",info:"~2.5 hours<br>Depart ~10am<br>~¥14,000/adult"}],stops:[{num:1,name:"Park Front Hotel (Checkout)",lat:34.6680,lng:135.4340,time:"Morning",color:"#e65c00",emoji:"🏨",query:"The Park Front Hotel Universal Studios Japan Osaka",desc:"Check out of Park Front Hotel (checkout 12pm). Breakfast at hotel or Universal CityWalk. Head to Shin-Osaka Station for Shinkansen to Tokyo.",tags:[{l:"Checkout",cls:"t-hotel"}]},{num:2,name:"Shin-Osaka Station",lat:34.7333,lng:135.5029,time:"9:30 am",color:"#ff9800",emoji:"🚉",query:"Shin-Osaka Station",desc:"Depart for Tokyo. Buy snacks & ekiben.",tags:[{l:"Transport",cls:"t-transport"}]},{num:3,name:"Tokyo Station (Arrive)",lat:35.6762,lng:139.7640,time:"12:30 pm",color:"#e65c00",emoji:"🚉",query:"Tokyo Station",desc:"Arrive Tokyo. Head to Ikebukuro or check into new hotel first.",tags:[{l:"Arrival",cls:"t-transport"}]},{num:4,name:"Gashapon Department Store",lat:35.7295,lng:139.7191,time:"2:30 pm",color:"#1a73e8",emoji:"🎰",query:"Gashapon Department Store Sunshine City Ikebukuro",desc:"3,000+ gashapon (vending) machines! 7 floors of capsule toy madness.",tags:[{l:"Activity",cls:"t-activity"},{l:"Bring ¥100 coins",cls:"t-transport"}]},{num:5,name:"Capybara Café Ikebukuro",lat:35.7300,lng:139.7195,time:"3:30 pm",color:"#e91e63",emoji:"🦫",query:"Capybara Cafe Ikebukuro",desc:"Adorable capybara café! Pet the animals. Make reservations in advance!",tags:[{l:"Activity",cls:"t-activity"},{l:"⚠️ Book ahead",cls:"t-warn"}]},{num:6,name:"Sunshine City Exploration",lat:35.7295,lng:139.7191,time:"5:00 pm",color:"#00bcd4",emoji:"🏢",query:"Sunshine City Ikebukuro",desc:"Shopping & entertainment complex. Aquarium, stores, arcade.",tags:[{l:"Activity",cls:"t-activity"}]},{num:7,name:"Dinner (Ikebukuro)",lat:35.7300,lng:139.7180,time:"6:30 pm",color:"#4caf50",emoji:"🍽️",query:"Ikebukuro Tokyo restaurants",desc:"Dinner in Ikebukuro. Many options.",tags:[{l:"Food",cls:"t-food"}]},{num:8,name:"Hotel Check-in (Tokyo)",lat:35.6700,lng:139.7100,time:"8:00 pm",color:"#e65c00",emoji:"🏨",query:"Tokyo hotel",desc:"Check into new Tokyo hotel. TBD location.",tags:[{l:"Hotel",cls:"t-hotel"}]}],notes:["Shinkansen ~¥14,000/adult. Bring ¥100 coins for gashapon."]},
+  {dayNum:16,date:"Jun 8 (Mon)",title:"Tokyo",subtitle:"Odaiba — DECKS Tokyo Beach, Aqua City, Miraikan & DiverCity",mapCenter:{lat:35.627,lng:139.775},zoom:13,travelBlocks:[{icon:"🚇",title:"Train to Odaiba",info:"9am take Yurikamome line<br>Ride front car for best views!<br>~15 min to Odaiba"}],stops:[{num:1,name:"Grand Monday Ginza",lat:35.6694,lng:139.7649,time:"Start",color:"#e65c00",emoji:"🏨",query:"Premium Apart Monday Ginza Tokyo",desc:"Premium Apart Monday Ginza. Your base in central Tokyo — walking distance to Ginza shops, Tsukiji area & Tokyo Station.",tags:[{l:"Hotel",cls:"t-hotel"}]},{num:2,name:"DECKS Tokyo Beach",lat:35.6267,lng:139.7753,time:"9:30 am",color:"#1a73e8",emoji:"🎢",query:"DECKS Tokyo Beach Odaiba",desc:"Entertainment complex. LEGOLAND Discovery Center, Joypolis arcade, Madame Tussauds.",tags:[{l:"Activity",cls:"t-activity"},{l:"Book LEGO online",cls:"t-warn"}]},{num:3,name:"LEGOLAND Discovery Center",lat:35.6268,lng:139.7750,time:"9:45 am",color:"#ffeb3b",emoji:"🧱",query:"LEGOLAND Discovery Center Odaiba",desc:"LEGO building & attractions. Interactive experiences. Height checks apply.",tags:[{l:"Activity",cls:"t-activity"}]},{num:4,name:"Joypolis Arcade",lat:35.6265,lng:139.7755,time:"11:00 am",color:"#e91e63",emoji:"🎮",query:"Joypolis Odaiba",desc:"Massive indoor theme park & arcade. VR, rides, games.",tags:[{l:"Activity",cls:"t-activity"}]},{num:5,name:"Madame Tussauds Odaiba",lat:35.6270,lng:139.7760,time:"12:00 pm",color:"#9c27b0",emoji:"🎭",query:"Madame Tussauds Odaiba",desc:"Wax museum. Pose with celebrities!",tags:[{l:"Activity",cls:"t-activity"}]},{num:6,name:"Aqua City & Lunch",lat:35.6275,lng:139.7775,time:"12:30 pm",color:"#c0392b",emoji:"🍜",query:"Aqua City Odaiba Tokyo Ramen Kokugikan",desc:"Tokyo Ramen Kokugikan food hall. 9 ramen shops to choose from.",tags:[{l:"Food",cls:"t-food"}]},{num:7,name:"Miraikan Science Museum",lat:35.6290,lng:139.7761,time:"1:30 pm",color:"#00bcd4",emoji:"🔬",query:"Miraikan National Museum of Emerging Science",desc:"Interactive science & future tech. Great for all ages.",tags:[{l:"Activity",cls:"t-activity"}]},{num:8,name:"DiverCity Tokyo Plaza",lat:35.6267,lng:139.7730,time:"3:30 pm",color:"#ff9800",emoji:"🎡",query:"DiverCity Tokyo Plaza Odaiba",desc:"Shopping mall. Life-size Unicorn Gundam statue. Anime & character shops.",tags:[{l:"Activity",cls:"t-activity"},{l:"Shopping",cls:"t-transport"}]},{num:9,name:"Odaiba Marine Park Sunset",lat:35.6300,lng:139.7700,time:"5:30 pm",color:"#4caf50",emoji:"🌅",query:"Odaiba Marine Park Tokyo",desc:"Beautiful waterfront park. Mini Statue of Liberty. Sunset views.",tags:[{l:"Activity",cls:"t-activity"}]},{num:10,name:"Dinner with Bay Views",lat:35.6280,lng:139.7750,time:"6:30 pm",color:"#673ab7",emoji:"🍽️",query:"Odaiba Tokyo restaurants bay view",desc:"Dinner with Tokyo Bay views. Romantic!",tags:[{l:"Food",cls:"t-food"}]},{num:11,name:"Return to Hotel",lat:35.6700,lng:139.7100,time:"8:00 pm",color:"#2196f3",emoji:"🏨",query:"Tokyo hotel",desc:"Head back to hotel area.",tags:[{l:"Rest",cls:"t-activity"}]}],notes:["Reserve LEGOLAND online. Height checks for Joypolis. Ride Yurikamome front car for great views!"]},
+  {dayNum:17,date:"Jun 9 (Tue)",title:"Departure",subtitle:"Fly HND → ORD → ATL",mapCenter:{lat:35.55,lng:139.78},zoom:11,travelBlocks:[{icon:"✈️",title:"Flight: Tokyo → Chicago → Atlanta",info:"Depart HND 5:15pm<br>In-flight ~11 hours<br>Arrive ORD 9:40pm same day"}],stops:[{num:1,name:"Grand Monday Ginza (Checkout)",lat:35.6694,lng:139.7649,time:"Morning",color:"#e65c00",emoji:"🏨",query:"Premium Apart Monday Ginza Tokyo",desc:"Final checkout. Pack everything, last konbini run for snacks, then head to Haneda Airport.",tags:[{l:"Checkout",cls:"t-hotel"}]},{num:2,name:"Last Konbini Run",lat:35.6700,lng:139.7100,time:"9:00 am",color:"#1a73e8",emoji:"🏪",query:"7-Eleven Lawson Tokyo",desc:"Final snack & souvenir shopping. KitKats, Tokyo Banana, mochi.",tags:[{l:"Food",cls:"t-food"}]},{num:3,name:"Hotel Checkout",lat:35.6700,lng:139.7100,time:"10:00 am",color:"#ff9800",emoji:"🏨",query:"Tokyo hotel",desc:"Pack and checkout. Head to Haneda Airport.",tags:[{l:"Checkout",cls:"t-hotel"}]},{num:4,name:"Haneda Airport Check-in",lat:35.5494,lng:139.7798,time:"12:00 pm",color:"#e65c00",emoji:"✈️",query:"Haneda Airport Tokyo",desc:"Arrive 3+ hours early. Terminal 3. Check-in & security.",tags:[{l:"Departure",cls:"t-transport"}]},{num:5,name:"Airport Lunch",lat:35.5494,lng:139.7798,time:"1:00 pm",color:"#c0392b",emoji:"🍜",query:"Haneda Airport restaurants",desc:"Lunch before flight. HND Terminal 3 has great food.",tags:[{l:"Food",cls:"t-food"}]},{num:6,name:"Duty-Free Shopping",lat:35.5494,lng:139.7798,time:"2:00 pm",color:"#e91e63",emoji:"🎁",query:"Haneda Airport duty-free",desc:"Royce chocolate, Tokyo Banana, regional specialties.",tags:[{l:"Shopping",cls:"t-activity"}]},{num:7,name:"Departure Gate",lat:35.5494,lng:139.7798,time:"5:15 pm",color:"#9c27b0",emoji:"✈️",query:"Haneda Airport",desc:"Board flight. See you Japan!",tags:[{l:"Departure",cls:"t-transport"}]}],notes:["Arrive 3+ hrs early. HND Terminal 3 has great food. Fly HND → ORD → ATL."]}
+];
+
+const cache = {};
+const carouselPos = {};
+let map, infoWindow, markers = [], currentPolyline = null;
+let currentOpenIdx = -1;
+let iwNavigateGen = 0;
+/** Ignore marker “toggle close” briefly after any open (avoids spurious gmp-click when the map animates). */
+let lastInfoWindowOpenAt = 0;
+/** Ignore map clicks right after opening the InfoWindow (same gesture can fire both marker and map click). */
+let suppressInfoWindowMapCloseUntil = 0;
+let currentDay = 9;
+
+/** Carousel slide width in px — matches .iw width on narrow viewports. */
+function getIwSlidePx() {
+  if (typeof window === 'undefined') return 360;
+  const w = window.innerWidth;
+  if (w <= 480) return Math.min(Math.max(260, w - 24), 360);
+  return 360;
+}
+
+const MOBILE_LAYOUT_MQ = '(max-width: 900px)';
+function isMobileLayout() {
+  return typeof window !== 'undefined' && window.matchMedia(MOBILE_LAYOUT_MQ).matches;
+}
+
+function setDrawerOpen(open) {
+  document.body.classList.toggle('drawer-open', open);
+  const t = document.getElementById('drawerToggle');
+  if (t) {
+    t.setAttribute('aria-expanded', open);
+    t.setAttribute('aria-label', open ? 'Close itinerary' : 'Open itinerary');
+  }
+  const side = document.getElementById('sidebar');
+  if (side) {
+    if (isMobileLayout()) side.setAttribute('aria-hidden', open ? 'false' : 'true');
+    else side.removeAttribute('aria-hidden');
+  }
+}
+
+function closeDrawerIfMobile() {
+  if (isMobileLayout()) setDrawerOpen(false);
+}
+
+/** On mobile, scroll the day strip so the active tab is centered (helps early days on the left). */
+function scrollActiveDayTabIntoView() {
+  if (!isMobileLayout()) return;
+  const nav = document.getElementById('dayNav');
+  if (!nav) return;
+  const tabs = nav.querySelectorAll('.day-tab');
+  const active = tabs[currentDay];
+  if (!active) return;
+  active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+}
+
+function initDrawer() {
+  const toggle = document.getElementById('drawerToggle');
+  const backdrop = document.getElementById('drawerBackdrop');
+  const closeBtn = document.getElementById('drawerClose');
+  if (!toggle || !backdrop || !closeBtn) return;
+  toggle.addEventListener('click', () => {
+    setDrawerOpen(!document.body.classList.contains('drawer-open'));
+  });
+  backdrop.addEventListener('click', () => setDrawerOpen(false));
+  closeBtn.addEventListener('click', () => setDrawerOpen(false));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.body.classList.contains('drawer-open')) setDrawerOpen(false);
+  });
+  let resizeDrawerTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeDrawerTimer);
+    resizeDrawerTimer = setTimeout(() => {
+      if (!isMobileLayout()) {
+        document.body.classList.remove('drawer-open');
+        const side = document.getElementById('sidebar');
+        if (side) side.removeAttribute('aria-hidden');
+        const t = document.getElementById('drawerToggle');
+        if (t) {
+          t.setAttribute('aria-expanded', 'false');
+          t.setAttribute('aria-label', 'Open itinerary');
+        }
+      } else {
+        setDrawerOpen(document.body.classList.contains('drawer-open'));
+      }
+    }, 150);
+  });
+  if (isMobileLayout()) {
+    document.getElementById('sidebar').setAttribute('aria-hidden', 'true');
+  }
+}
+
+function renderDayNav() {
+  const nav = document.getElementById('dayNav');
+  nav.innerHTML = '';
+  DAYS.forEach((day, idx) => {
+    const tab = document.createElement('button');
+    tab.className = 'day-tab' + (idx === currentDay ? ' active' : '');
+    tab.innerHTML = `Day ${day.dayNum}<span class="day-tab-badge">${day.date.split('(')[1].replace(')', '')}</span>`;
+    tab.onclick = () => switchDay(idx);
+    nav.appendChild(tab);
+  });
+}
+
+function switchDay(dayIdx) {
+  currentDay = dayIdx;
+  const day = DAYS[dayIdx];
+  document.getElementById('headerBadge').textContent = day.dayNum;
+  document.getElementById('headerTitle').textContent = `Day ${day.dayNum} · ${day.title} · ${day.date}`;
+  document.getElementById('headerSubtitle').textContent = day.subtitle;
+  renderSidebar(day);
+  if (map) {
+    map.setCenter(day.mapCenter);
+    map.setZoom(day.zoom);
+    clearMapMarkers();
+    Object.keys(cache).forEach(k => delete cache[k]);
+    Object.keys(carouselPos).forEach(k => delete carouselPos[k]);
+    createMarkers(day.stops);
+  }
+  renderNotes(day.notes);
+  document.querySelectorAll('.day-tab').forEach((t, i) => {
+    t.classList.toggle('active', i === dayIdx);
+  });
+  scrollActiveDayTabIntoView();
+}
+
+function renderSidebar(day) {
+  const html = [];
+  if (day.travelBlocks && day.travelBlocks.length > 0) {
+    html.push('<div class="section-label">Travel</div>');
+    day.travelBlocks.forEach(block => {
+      html.push(`<div class="travel-block"><div class="travel-icon">${block.icon}</div><div class="travel-info"><strong>${block.title}</strong>${block.info}</div></div>`);
+    });
+  }
+  if (day.stops && day.stops.length > 0) {
+    html.push('<div class="section-label">' + (day.travelBlocks?.length ? 'Stops' : 'Stops & Activities') + '</div>');
+    day.stops.forEach((stop, i) => {
+      const tags = stop.tags.map(t => `<span class="tag ${t.cls}">${t.l}</span>`).join('');
+      html.push(`<div class="stop" data-idx="${i}" onclick="selectStop(${currentDay}, ${i})"><div class="stop-num" style="background:${stop.color};">${stop.num}</div><div class="stop-content"><div class="stop-time">${stop.time}</div><div class="stop-name">${stop.name}</div><div class="stop-desc">${stop.desc}</div>${tags}</div></div>`);
+      if (i < day.stops.length - 1) { html.push('<div class="connector"></div>'); }
+    });
+  }
+  document.getElementById('sidebarContent').innerHTML = html.join('');
+}
+
+function renderNotes(notes) {
+  const bar = document.getElementById('notesBar');
+  bar.style.display = 'none';
+  return;
+}
+
+function clearMapMarkers() { markers.forEach(m => m.map = null); markers = []; if (currentPolyline) { currentPolyline.setMap(null); currentPolyline = null; } }
+
+function createMarkers(stops) {
+  if (!map) return;
+  stops.forEach((s, i) => {
+    const pin = document.createElement('div');
+    pin.className = 'map-pin';
+    pin.style.background = s.color;
+    pin.textContent = String(s.num);
+    const marker = new google.maps.marker.AdvancedMarkerElement({
+      position: { lat: s.lat, lng: s.lng },
+      map,
+      content: pin,
+      title: s.name,
+      zIndex: i + 1
+    });
+    marker.addListener('gmp-click', () => {
+      if (infoWindow && infoWindow.getMap() && currentOpenIdx === i) {
+        if (Date.now() - lastInfoWindowOpenAt < 900) return;
+        closeInfoWindowAndClearUI();
+        return;
+      }
+      suppressInfoWindowMapCloseUntil = Date.now() + 450;
+      map.panTo({ lat: s.lat, lng: s.lng });
+      runAfterPanThenBottomOffset(() => {
+        openIW(currentDay, i, marker);
+        highlightSidebar(i);
+      });
+    });
+    markers.push(marker);
+  });
+  if (stops.length > 1) {
+    currentPolyline = new google.maps.Polyline({
+      path: stops.map(s => ({ lat: s.lat, lng: s.lng })),
+      geodesic: true,
+      strokeColor: '#c0392b',
+      strokeOpacity: 0.5,
+      strokeWeight: 3,
+      icons: [{ icon: { path: google.maps.SymbolPath.FORWARD_OPEN_ARROW, scale: 3, strokeColor: '#c0392b' }, offset: '50%' }],
+      map
+    });
+  }
+  stops.forEach((_, i) => fetchPlaceData(currentDay, i));
+  if (markers.length > 0) {
+    const s0 = stops[0];
+    map.panTo({ lat: s0.lat, lng: s0.lng });
+    runAfterPanThenBottomOffset(() => openIW(currentDay, 0, markers[0]));
+  }
+}
+
+async function fetchPlaceData(dayIdx, stopIdx) {
+  const cacheKey = `${dayIdx}-${stopIdx}`;
+  if (cache[cacheKey]) return;
+  const day = DAYS[dayIdx];
+  const s = day.stops[stopIdx];
+  const { Place } = await google.maps.importLibrary("places");
+  try {
+    const { places } = await Place.searchByText({
+      textQuery: s.query,
+      fields: ['id', 'photos'],
+      maxResultCount: 1
+    });
+    if (!places || places.length === 0) { cache[cacheKey] = { photos: [], placeId: null }; return; }
+    const place = places[0];
+    const photoUrls = (place.photos || []).slice(0, 6).map(p => p.getURI({ maxWidth: 560, maxHeight: 316 }));
+    cache[cacheKey] = { photos: photoUrls, placeId: place.id };
+    if (currentOpenIdx === stopIdx && currentDay === dayIdx) {
+      lastInfoWindowOpenAt = Date.now();
+      infoWindow.setContent(buildIW(dayIdx, stopIdx));
+      hideGoogleInfoWindowDefaultClose();
+    }
+  } catch (e) {
+    cache[cacheKey] = { photos: [], placeId: null };
+  }
+}
+
+/** Hide Maps’ built-in InfoWindow close (outside our HTML). */
+function hideGoogleInfoWindowDefaultClose() {
+  const hide = () => {
+    document.querySelectorAll('.gm-style-iw-c').forEach(c => {
+      c.querySelectorAll(':scope > button').forEach(btn => {
+        btn.style.setProperty('display', 'none', 'important');
+      });
+    });
+    document.querySelectorAll('.gm-style-iw-ch button').forEach(btn => {
+      if (!btn.closest('.iw')) btn.style.setProperty('display', 'none', 'important');
+    });
+    document.querySelectorAll('.gm-style-iw + button').forEach(btn => {
+      btn.style.setProperty('display', 'none', 'important');
+    });
+  };
+  hide();
+  requestAnimationFrame(hide);
+  setTimeout(hide, 0);
+  setTimeout(hide, 80);
+}
+
+function closeInfoWindowAndClearUI() {
+  if (!infoWindow || !infoWindow.getMap()) return;
+  infoWindow.close();
+  currentOpenIdx = -1;
+  document.querySelectorAll('.stop').forEach(el => el.classList.remove('active'));
+}
+
+function openIW(dayIdx, stopIdx, marker) {
+  currentOpenIdx = stopIdx;
+  lastInfoWindowOpenAt = Date.now();
+  suppressInfoWindowMapCloseUntil = Date.now() + 350;
+  infoWindow.setContent(buildIW(dayIdx, stopIdx));
+  infoWindow.open({ map, anchor: marker, shouldFocus: false });
+  hideGoogleInfoWindowDefaultClose();
+}
+
+/** After map.panTo centers the marker, shift the view so the pin sits ~this many px above the map bottom (room for InfoWindow above). */
+const MARKER_BOTTOM_OFFSET_PX = 90;
+
+/** Call immediately after panTo / setZoom. On idle, applies vertical pixel offset, then runs callback after the next idle (panBy may animate). */
+function runAfterPanThenBottomOffset(callback) {
+  if (!map) return;
+  google.maps.event.addListenerOnce(map, 'idle', () => {
+    const h = map.getDiv().clientHeight;
+    if (h >= 40) map.panBy(0, MARKER_BOTTOM_OFFSET_PX - h / 2);
+    google.maps.event.addListenerOnce(map, 'idle', callback);
+  });
+}
+
+function mapsUrl(dayIdx, stopIdx) {
+  const cacheKey = `${dayIdx}-${stopIdx}`;
+  const c = cache[cacheKey];
+  const day = DAYS[dayIdx];
+  const s = day.stops[stopIdx];
+  const query = encodeURIComponent(s.name);
+  if (c && c.placeId) return `https://www.google.com/maps/search/?api=1&query=${query}&query_place_id=${c.placeId}`;
+  return `https://www.google.com/maps/search/?api=1&query=${query}`;
+}
+
+function buildIW(dayIdx, stopIdx) {
+  const day = DAYS[dayIdx];
+  const s = day.stops[stopIdx];
+  const cacheKey = `${dayIdx}-${stopIdx}`;
+  const c = cache[cacheKey];
+  const photos = c ? c.photos : null;
+  const cur = carouselPos[cacheKey] || 0;
+  const n = photos ? photos.length : 0;
+  let carouselHtml;
+  if (!c) {
+    carouselHtml = `<div class="iw-carousel"><div class="iw-carousel-track"><div class="iw-loading"><div class="spinner"></div>Loading photos…</div></div></div>`;
+  } else if (n === 0) {
+    carouselHtml = `<div class="iw-carousel"><div class="iw-carousel-track"><div class="iw-placeholder">${s.emoji}</div></div></div>`;
+  } else {
+    const imgs = photos.map(u => `<img src="${u}" alt="${s.name}">`).join('');
+    const arrows = n > 1 ? `<button class="iw-arrow iw-arrow-left${cur === 0 ? ' hidden' : ''}" onclick="slide(${dayIdx},${stopIdx},-1)">&#8249;</button><button class="iw-arrow iw-arrow-right${cur === n-1 ? ' hidden' : ''}" onclick="slide(${dayIdx},${stopIdx},1)">&#8250;</button><div class="iw-counter">${cur+1} / ${n}</div><div class="iw-dots">${photos.map((_,i) => `<div class="iw-dot${i===cur?' active':''}" onclick="slideTo(${dayIdx},${stopIdx},${i})"></div>`).join('')}</div>` : '';
+    const slideW = getIwSlidePx();
+    carouselHtml = `<div class="iw-carousel"><div class="iw-carousel-track" id="track-${cacheKey}" style="transform:translateX(-${cur * slideW}px)">${imgs}</div>${arrows}</div>`;
+  }
+  const totalStops = day.stops.length;
+  const esc = (str) => String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const prevCell = stopIdx > 0
+    ? `<button type="button" class="iw-stop-nav" title="${esc(day.stops[stopIdx - 1].name)}" onclick="navigateStop(-1)" aria-label="Previous stop">‹</button>`
+    : '<span class="iw-topbar-spacer" aria-hidden="true"></span>';
+  const nextCell = stopIdx < totalStops - 1
+    ? `<button type="button" class="iw-stop-nav" title="${esc(day.stops[stopIdx + 1].name)}" onclick="navigateStop(1)" aria-label="Next stop">›</button>`
+    : '<span class="iw-topbar-spacer" aria-hidden="true"></span>';
+  const carouselBlock = `<div class="iw-carousel-wrap">${carouselHtml}</div>`;
+  const tagsHtml = s.tags.map(t => `<span class="iw-tag ${t.cls}">${t.l}</span>`).join('');
+  const topBarHtml = `<div class="iw-topbar"><div class="iw-topbar-side">${prevCell}</div><div class="iw-topbar-center"><a class="iw-gmaps-btn" href="${mapsUrl(dayIdx, stopIdx)}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>Google Maps</a></div><div class="iw-topbar-side">${nextCell}</div></div>`;
+  return `<div class="iw" style="position:relative;">${topBarHtml}${carouselBlock}<div class="iw-body"><div class="iw-top"><div class="iw-num" style="background:${s.color};">${s.num}</div><div class="iw-name">${s.name}</div></div><div class="iw-meta"><div class="iw-time">⏱ ${s.time}</div></div><div class="iw-desc">${s.desc}</div><div class="iw-tags">${tagsHtml}</div></div></div>`;
+}
+
+function slide(dayIdx, stopIdx, dir) {
+  const cacheKey = `${dayIdx}-${stopIdx}`;
+  const n = (cache[cacheKey] && cache[cacheKey].photos) ? cache[cacheKey].photos.length : 0;
+  carouselPos[cacheKey] = Math.max(0, Math.min(n - 1, (carouselPos[cacheKey] || 0) + dir));
+  updateCarousel(cacheKey);
+}
+
+function slideTo(dayIdx, stopIdx, i) {
+  const cacheKey = `${dayIdx}-${stopIdx}`;
+  carouselPos[cacheKey] = i;
+  updateCarousel(cacheKey);
+}
+
+function updateCarousel(cacheKey) {
+  const cur = carouselPos[cacheKey] || 0;
+  const n = (cache[cacheKey] && cache[cacheKey].photos) ? cache[cacheKey].photos.length : 0;
+  const track = document.getElementById('track-' + cacheKey);
+  if (!track) return;
+  track.style.transform = `translateX(-${cur * getIwSlidePx()}px)`;
+  const wrap = track.closest('.iw-carousel');
+  if (!wrap) return;
+  const lBtn = wrap.querySelector('.iw-arrow-left');
+  const rBtn = wrap.querySelector('.iw-arrow-right');
+  const ctr = wrap.querySelector('.iw-counter');
+  const dots = wrap.querySelectorAll('.iw-dot');
+  if (lBtn) lBtn.classList.toggle('hidden', cur === 0);
+  if (rBtn) rBtn.classList.toggle('hidden', cur === n - 1);
+  if (ctr) ctr.textContent = `${cur+1} / ${n}`;
+  dots.forEach((d, i) => d.classList.toggle('active', i === cur));
+}
+
+function highlightSidebar(idx) {
+  document.querySelectorAll('.stop').forEach(s => s.classList.remove('active'));
+  const stops = document.querySelectorAll('.stop');
+  if (!stops[idx]) return;
+  stops[idx].classList.add('active');
+  const el = stops[idx];
+  const scrollEl = isMobileLayout()
+    ? document.querySelector('.sidebar-inner')
+    : document.getElementById('sidebar');
+  if (!scrollEl) return;
+  const cRect = scrollEl.getBoundingClientRect();
+  const eRect = el.getBoundingClientRect();
+  const delta = (eRect.top + eRect.height / 2) - (cRect.top + cRect.height / 2);
+  scrollEl.scrollTo({ top: scrollEl.scrollTop + delta, behavior: 'smooth' });
+}
+
+function selectStop(dayIdx, stopIdx) {
+  const day = DAYS[dayIdx];
+  const s = day.stops[stopIdx];
+  map.panTo({ lat: s.lat, lng: s.lng });
+  map.setZoom(17);
+  runAfterPanThenBottomOffset(() => {
+    openIW(dayIdx, stopIdx, markers[stopIdx]);
+  });
+  highlightSidebar(stopIdx);
+  closeDrawerIfMobile();
+}
+
+function navigateStop(dir) {
+  const day = DAYS[currentDay];
+  const newIdx = currentOpenIdx + dir;
+  if (newIdx < 0 || newIdx >= day.stops.length) return;
+  const s = day.stops[newIdx];
+  currentOpenIdx = newIdx;
+  const gen = ++iwNavigateGen;
+  map.panTo({ lat: s.lat, lng: s.lng });
+  google.maps.event.addListenerOnce(map, 'idle', () => {
+    if (gen !== iwNavigateGen || currentOpenIdx !== newIdx) return;
+    const h = map.getDiv().clientHeight;
+    if (h >= 40) map.panBy(0, MARKER_BOTTOM_OFFSET_PX - h / 2);
+    google.maps.event.addListenerOnce(map, 'idle', () => {
+      if (gen !== iwNavigateGen || currentOpenIdx !== newIdx) return;
+      openIW(currentDay, newIdx, markers[newIdx]);
+    });
+  });
+  highlightSidebar(newIdx);
+}
+
+async function initMap() {
+  const { Map, InfoWindow } = await google.maps.importLibrary("maps");
+  await google.maps.importLibrary("marker");
+  await google.maps.importLibrary("places");
+  map = new Map(document.getElementById('map'), {
+    center: DAYS[currentDay].mapCenter,
+    zoom: DAYS[currentDay].zoom,
+    mapId: 'DEMO_MAP_ID',
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: true
+  });
+  infoWindow = new InfoWindow({ maxWidth: Math.min(Math.max(280, window.innerWidth - 24), 360), disableAutoPan: true });
+  google.maps.event.addListener(infoWindow, 'domready', () => {
+    hideGoogleInfoWindowDefaultClose();
+  });
+  map.addListener('click', () => {
+    if (Date.now() < suppressInfoWindowMapCloseUntil) return;
+    closeInfoWindowAndClearUI();
+  });
+  let resizeIwTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeIwTimer);
+    resizeIwTimer = setTimeout(() => {
+      if (infoWindow && infoWindow.getMap() && currentOpenIdx >= 0) {
+        updateCarousel(`${currentDay}-${currentOpenIdx}`);
+      }
+    }, 150);
+  });
+  renderDayNav();
+  switchDay(currentDay);
+}
+
+window.initMap = initMap;
+window.switchDay = switchDay;
+window.selectStop = selectStop;
+window.slide = slide;
+window.slideTo = slideTo;
+window.navigateStop = navigateStop;
+
+initDrawer();
+</script>
+<script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyASFZsibwPn4OzGJmyniMlYocDzPUbbGmY&loading=async&callback=initMap"></script>
+</body>
+</html>
